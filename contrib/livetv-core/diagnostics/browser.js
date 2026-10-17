@@ -139,6 +139,7 @@ async function probeVisible() {
 }
 
 function proxyUrl(profile, url, requestType) {
+  if (String(url).startsWith('/api/proxy?') || String(url).startsWith(`${location.origin}/api/proxy?`)) return url;
   const index = profile?.metadata?.diagnosticIndex;
   const params = new URLSearchParams({
     token: state.meta.proxyToken,
