@@ -1,0 +1,10 @@
+{
+  "recommendations": [
+    "VoidZero.vite-plus-extension-pack",
+    "hyrious.import-cost",
+    "streetsidesoftware.code-spell-checker",
+    "DavidAnson.vscode-markdownlint",
+    "astro-build.astro-vscode",
+    "unifiedjs.vscode-mdx"
+  ]
+}

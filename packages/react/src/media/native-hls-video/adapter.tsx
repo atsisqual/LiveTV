@@ -1,0 +1,42 @@
+'use client';
+
+import { NativeHlsAdapter, type NativeHlsAdapterProps } from '@videojs/native-hls-video';
+import { forwardRef, type ReactNode, type VideoHTMLAttributes } from 'react';
+
+import { useAttachMedia } from '../../utils/use-attach-media';
+import { useComposedRefs } from '../../utils/use-composed-refs';
+import { useMediaInstance } from '../../utils/use-media-instance';
+import { type MediaRefProps, useMediaRef } from '../../utils/use-media-ref';
+import { useSyncProps } from '../../utils/use-sync-props';
+import { type MediaFallbackProps, videoFallback } from '../fallback';
+
+export interface NativeHlsVideoProps
+  extends
+    Omit<VideoHTMLAttributes<HTMLVideoElement>, keyof NativeHlsAdapterProps>,
+    Partial<NativeHlsAdapterProps>,
+    MediaRefProps<NativeHlsAdapter>,
+    MediaFallbackProps {
+  children?: ReactNode;
+}
+
+export const NativeHlsVideo = forwardRef<HTMLVideoElement, NativeHlsVideoProps>(function NativeHlsVideo(
+  { children, fallback = videoFallback, mediaRef, ...props },
+  ref
+) {
+  const media = useMediaInstance(NativeHlsAdapter);
+  const attachRef = useAttachMedia(media);
+  const exposeRef = useMediaRef(media, mediaRef);
+  const composedRef = useComposedRefs(attachRef, exposeRef, ref);
+  const htmlProps = useSyncProps(media, props, NativeHlsAdapter.defaultProps);
+
+  return (
+    <video ref={composedRef} {...htmlProps}>
+      {children}
+      {fallback}
+    </video>
+  );
+});
+
+export namespace NativeHlsVideo {
+  export type Props = NativeHlsVideoProps;
+}
