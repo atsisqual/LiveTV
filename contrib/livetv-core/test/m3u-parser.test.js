@@ -33,3 +33,17 @@ test('parses Kodi stream headers and Widevine license headers', () => {
   assert.equal(item.drm.licenseUri, 'https://license.example.test/wv');
   assert.equal(item.drm.headers.Authorization, 'Bearer abc');
 });
+
+test('matches quoted EXTVLCOPT values used by the real M3UPT playlist', () => {
+  const [item] = parseM3U(`#EXTM3U\n#EXTINF:-1 group-title="TV" tvg-id="RTP1.pt",RTP 1\n#EXTVLCOPT:http-user-agent="Mozilla/5.0 (X11; Linux x86_64) Firefox/152.0"\n#EXTVLCOPT:http-origin=https://www.rtp.pt\n#EXTVLCOPT:http-referrer=https://www.rtp.pt/play/direto/rtp1\nhttps://streaming-live.rtp.pt/liverepeater/smil:rtp1HD.smil/playlist.m3u8`);
+  assert.equal(item.headers['User-Agent'], 'Mozilla/5.0 (X11; Linux x86_64) Firefox/152.0');
+  assert.equal(item.headers.Origin, 'https://www.rtp.pt');
+  assert.equal(item.id, 'RTP1.pt');
+});
+
+test('does not leak metadata when a channel URL is commented out', () => {
+  const items = parseM3U(`#EXTM3U\n#EXTINF:-1 tvg-id="disabled",Disabled\n#EXTVLCOPT:http-origin=https://disabled.example.test\n#https://disabled.example.test/live.m3u8\n#EXTINF:-1 tvg-id="working",Working\nhttps://working.example.test/live.m3u8`);
+  assert.equal(items.length, 1);
+  assert.equal(items[0].id, 'working');
+  assert.equal(items[0].headers.Origin, undefined);
+});
