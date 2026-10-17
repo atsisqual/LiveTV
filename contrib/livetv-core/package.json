@@ -1,13 +1,13 @@
 {
   "name": "@livetv/playback-core",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "private": true,
   "type": "module",
   "description": "Robust LiveTV playback backend on Video.js 10 official HLS/Shaka adapters, embedded-first M3U loading, DRM, retry, recovery and diagnostics.",
   "exports": "./src/index.js",
   "scripts": {
     "test": "node --test test/*.test.js",
-    "check": "node --check src/index.js && node --check src/engine-manager.js && node --check src/m3u-parser.js && node --check src/playlist-store.js && node --check src/network-policy.js && node --check src/stream-profile.js && node --check src/diagnostics.js && node --check src/engines/videojs-engine.js && node --check src/engines/shaka-engine.js && node --check diagnostics/server.js && node --check diagnostics/browser.js && node --check diagnostics/cli.js && node --check android/v070-enhancer.js && node --check android/v080-enhancer.js && node --check android/v090-enhancer.js && node --check android/v070-build-patch.mjs",
+    "check": "node --check src/index.js && node --check src/engine-manager.js && node --check src/m3u-parser.js && node --check src/playlist-store.js && node --check src/network-policy.js && node --check src/stream-profile.js && node --check src/diagnostics.js && node --check src/engines/videojs-engine.js && node --check src/engines/shaka-engine.js && node --check diagnostics/server.js && node --check diagnostics/browser.js && node --check diagnostics/cli.js && node --check android/v070-enhancer.js && node --check android/v080-enhancer.js && node --check android/v090-enhancer.js && node --check android/v091-parity.js && node --check android/v070-build-patch.mjs",
     "diagnostics:build": "esbuild diagnostics/browser.js --bundle --format=esm --platform=browser --target=es2022 --outfile=diagnostics/dist/app.js",
     "diagnostics": "npm run diagnostics:build && node diagnostics/server.js",
     "diagnostics:report": "node diagnostics/cli.js"
