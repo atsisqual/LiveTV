@@ -1,0 +1,9 @@
+.gradle/
+android/.gradle/
+android/local.properties
+android/app/build/
+node_modules/
+android/app/src/main/assets/shaka-player.compiled.js
+android/app/src/main/assets/M3UPT.m3u
+*.apk
+.DS_Store
