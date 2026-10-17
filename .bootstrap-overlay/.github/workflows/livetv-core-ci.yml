@@ -1,0 +1,28 @@
+name: LiveTV playback core
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  playback-core:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install playback-core dependencies
+        working-directory: contrib/livetv-core
+        run: npm install --package-lock=false --ignore-scripts --no-audit --no-fund
+      - name: Syntax check
+        working-directory: contrib/livetv-core
+        run: npm run check
+      - name: Tests
+        working-directory: contrib/livetv-core
+        run: npm test
