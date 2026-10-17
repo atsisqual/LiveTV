@@ -1,6 +1,6 @@
 {
   "name": "@livetv/playback-core",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "private": true,
   "type": "module",
   "description": "Robust LiveTV playback backend on Video.js 10 official HLS/Shaka adapters, embedded-first M3U loading, DRM, retry, recovery and diagnostics.",

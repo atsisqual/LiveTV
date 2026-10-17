@@ -1,6 +1,8 @@
 package com.atsisqual.livetv.shaka;
 
 import android.app.Activity;
+import android.content.pm.ActivityInfo;
+import android.content.res.Configuration;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.view.View;
@@ -38,6 +40,7 @@ public class MainActivity extends Activity {
     private View fullscreenView;
     private WebChromeClient.CustomViewCallback fullscreenCallback;
     private volatile Map<String, String> playbackHeaders = Collections.emptyMap();
+    private volatile boolean playerMode = false;
 
     @Override
     protected void onCreate(Bundle state) {
@@ -102,10 +105,7 @@ public class MainActivity extends Activity {
                 root.addView(view, new FrameLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT,
                         ViewGroup.LayoutParams.MATCH_PARENT));
-                getWindow().getDecorView().setSystemUiVisibility(
-                        View.SYSTEM_UI_FLAG_FULLSCREEN
-                                | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                                | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
+                applyImmersiveUi();
             }
 
             @Override
@@ -133,8 +133,12 @@ public class MainActivity extends Activity {
             } catch (Exception ignored) {}
         }
 
-        for (Map.Entry<String, String> entry : playbackHeaders.entrySet()) {
-            connection.setRequestProperty(entry.getKey(), entry.getValue());
+        String host = request.getUrl().getHost();
+        boolean mediaLike = host != null && !host.equalsIgnoreCase("raw.githubusercontent.com");
+        if (mediaLike) {
+            for (Map.Entry<String, String> entry : playbackHeaders.entrySet()) {
+                connection.setRequestProperty(entry.getKey(), entry.getValue());
+            }
         }
 
         int code = connection.getResponseCode();
@@ -177,12 +181,38 @@ public class MainActivity extends Activity {
         return new WebResourceResponse(mime, encoding, code, reason, responseHeaders, body);
     }
 
+    private void applyImmersiveUi() {
+        getWindow().getDecorView().setSystemUiVisibility(
+                View.SYSTEM_UI_FLAG_FULLSCREEN
+                        | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                        | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                        | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                        | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                        | View.SYSTEM_UI_FLAG_LAYOUT_STABLE);
+    }
+
+    private void leaveImmersiveUi() {
+        getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_VISIBLE);
+    }
+
+    private void enterPlaybackModeNative() {
+        playerMode = true;
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
+        applyImmersiveUi();
+    }
+
+    private void exitPlaybackModeNative() {
+        playerMode = false;
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+        leaveImmersiveUi();
+    }
+
     private void exitFullscreen() {
         if (fullscreenView == null) return;
         root.removeView(fullscreenView);
         fullscreenView = null;
         web.setVisibility(View.VISIBLE);
-        getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_VISIBLE);
+        if (playerMode) applyImmersiveUi(); else leaveImmersiveUi();
         if (fullscreenCallback != null) {
             fullscreenCallback.onCustomViewHidden();
             fullscreenCallback = null;
@@ -193,6 +223,13 @@ public class MainActivity extends Activity {
     public void onBackPressed() {
         if (fullscreenView != null) {
             exitFullscreen();
+            return;
+        }
+        if (playerMode || getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE) {
+            web.evaluateJavascript(
+                    "window.LiveTVExitPlayer ? (window.LiveTVExitPlayer(), true) : false",
+                    null);
+            exitPlaybackModeNative();
             return;
         }
         if (web.canGoBack()) {
@@ -229,6 +266,16 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public void clearPlaybackHeaders() {
             playbackHeaders = Collections.emptyMap();
+        }
+
+        @JavascriptInterface
+        public void enterPlaybackMode() {
+            runOnUiThread(() -> enterPlaybackModeNative());
+        }
+
+        @JavascriptInterface
+        public void exitPlaybackMode() {
+            runOnUiThread(() -> exitPlaybackModeNative());
         }
 
         private void putIfPresent(Map<String, String> target, String key, String value) {
