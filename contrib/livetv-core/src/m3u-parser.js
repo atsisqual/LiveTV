@@ -16,8 +16,17 @@ function parseAttributes(text) {
   return out;
 }
 
+function stripWrappingQuotes(value) {
+  const text = String(value ?? '').trim();
+  if (text.length >= 2 && ((text.startsWith('"') && text.endsWith('"')) || (text.startsWith("'") && text.endsWith("'")))) {
+    return text.slice(1, -1);
+  }
+  return text;
+}
+
 function decodeValue(value) {
-  try { return decodeURIComponent(value); } catch { return value; }
+  const clean = stripWrappingQuotes(value);
+  try { return decodeURIComponent(clean); } catch { return clean; }
 }
 
 function parseHeaderQuery(text = '') {
@@ -80,6 +89,10 @@ function newPending() {
   return { info: {}, name: '', headers: {}, kodi: {}, extHttp: {}, group: '' };
 }
 
+function hasPendingEntry(pending) {
+  return Boolean(pending.name || Object.keys(pending.info).length || Object.keys(pending.headers).length || Object.keys(pending.kodi).length || Object.keys(pending.extHttp).length);
+}
+
 export function parseM3U(text, { source = 'm3u' } = {}) {
   const lines = String(text || '').replace(/^\uFEFF/, '').split(/\r?\n/);
   const items = [];
@@ -90,6 +103,10 @@ export function parseM3U(text, { source = 'm3u' } = {}) {
     if (!line) continue;
 
     if (line.startsWith('#EXTINF:')) {
+      // Some public playlists deliberately comment out a channel URL. Starting a
+      // new EXTINF means the previous pending item was disabled/incomplete; drop
+      // all of its headers/DRM metadata instead of leaking them to the next item.
+      if (hasPendingEntry(pending)) pending = newPending();
       const [meta, name] = splitOutsideQuotes(line.slice(8));
       pending.info = parseAttributes(meta);
       pending.name = name.trim();
@@ -107,7 +124,7 @@ export function parseM3U(text, { source = 'm3u' } = {}) {
       const eq = option.indexOf('=');
       if (eq > 0) {
         const key = option.slice(0, eq).trim().replace(/^http-/, '');
-        pending.headers[canonicalHeaderName(key)] = option.slice(eq + 1).trim();
+        pending.headers[canonicalHeaderName(key)] = decodeValue(option.slice(eq + 1));
       }
       continue;
     }
@@ -115,7 +132,7 @@ export function parseM3U(text, { source = 'm3u' } = {}) {
     if (line.startsWith('#EXTHTTP:')) {
       try {
         const value = JSON.parse(line.slice(9));
-        for (const [k, v] of Object.entries(value || {})) pending.extHttp[canonicalHeaderName(k)] = String(v);
+        for (const [k, v] of Object.entries(value || {})) pending.extHttp[canonicalHeaderName(k)] = stripWrappingQuotes(v);
       } catch {
         // Invalid optional metadata must not discard the channel.
       }
@@ -125,7 +142,7 @@ export function parseM3U(text, { source = 'm3u' } = {}) {
     if (line.startsWith('#KODIPROP:')) {
       const prop = line.slice(10);
       const eq = prop.indexOf('=');
-      if (eq > 0) pending.kodi[prop.slice(0, eq).trim()] = prop.slice(eq + 1).trim();
+      if (eq > 0) pending.kodi[prop.slice(0, eq).trim()] = stripWrappingQuotes(prop.slice(eq + 1));
       continue;
     }
 
