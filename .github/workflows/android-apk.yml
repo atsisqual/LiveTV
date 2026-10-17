@@ -28,11 +28,15 @@ jobs:
         working-directory: contrib/livetv-core
         run: npm install --package-lock=false --ignore-scripts --no-audit --no-fund
 
+      - name: Check playback and Android layers
+        working-directory: contrib/livetv-core
+        run: npm run check
+
       - name: Test playback core
         working-directory: contrib/livetv-core
         run: npm test
 
-      - name: Apply Android v0.7 player layer
+      - name: Apply Android v0.8 player layer
         run: node contrib/livetv-core/android/v070-build-patch.mjs
 
       - name: Bundle Android web player
@@ -68,20 +72,20 @@ jobs:
           APK=android/app/build/outputs/apk/debug/app-debug.apk
           test -f "$APK"
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep "package: name='com.atsisqual.livetv.shaka'"
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep "versionName='0.7.0'"
-          cp "$APK" LiveTV-Android-Test-v0.7.0.apk
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep "versionName='0.8.0'"
+          cp "$APK" LiveTV-Android-Test-v0.8.0.apk
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
         with:
-          name: LiveTV-Android-Test-v0.7.0
-          path: LiveTV-Android-Test-v0.7.0.apk
+          name: LiveTV-Android-Test-v0.8.0
+          path: LiveTV-Android-Test-v0.8.0.apk
           if-no-files-found: error
 
       - name: Publish test APK release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          TAG=android-test-v0.7.0
-          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "LiveTV Android Test v0.7.0" --notes "Operator-style landscape player refinement: right-side channels and EPG drawers, recent channels, grid/list views, PiP, screen modes, playback speed, lock mode, brightness and volume controls. M3UPT EPG programme artwork is used when available. Backend remains Video.js 10 + HLS/Shaka fallback with embedded M3UPT and native request headers." --prerelease
-          gh release upload "$TAG" LiveTV-Android-Test-v0.7.0.apk --clobber
+          TAG=android-test-v0.8.0
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "LiveTV Android Test v0.8.0" --notes "Functional landscape-player pass: Android Back closes drawers/menus before leaving playback, vertical edge gestures control real screen brightness and Android media volume, double-tap seeks, pinch cycles screen modes, PiP state is synchronized with the player UI, and EPG progress seeking is mapped to the live DVR window when available. Video.js 10 + HLS/Shaka fallback and M3UPT remain unchanged." --prerelease
+          gh release upload "$TAG" LiveTV-Android-Test-v0.8.0.apk --clobber
