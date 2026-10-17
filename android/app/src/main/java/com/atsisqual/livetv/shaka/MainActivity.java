@@ -2,9 +2,11 @@ package com.atsisqual.livetv.shaka;
 
 import android.app.Activity;
 import android.app.PictureInPictureParams;
+import android.content.Context;
 import android.content.pm.ActivityInfo;
 import android.content.res.Configuration;
 import android.graphics.Color;
+import android.media.AudioManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Rational;
@@ -44,6 +46,7 @@ public class MainActivity extends Activity {
     private WebChromeClient.CustomViewCallback fullscreenCallback;
     private volatile Map<String, String> playbackHeaders = Collections.emptyMap();
     private volatile boolean playerMode = false;
+    private volatile boolean overlayOpen = false;
 
     @Override
     protected void onCreate(Bundle state) {
@@ -200,12 +203,14 @@ public class MainActivity extends Activity {
 
     private void enterPlaybackModeNative() {
         playerMode = true;
+        overlayOpen = false;
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
         applyImmersiveUi();
     }
 
     private void exitPlaybackModeNative() {
         playerMode = false;
+        overlayOpen = false;
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
         leaveImmersiveUi();
     }
@@ -213,6 +218,8 @@ public class MainActivity extends Activity {
     private void enterPictureInPictureNative() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || !playerMode || isInPictureInPictureMode()) return;
         try {
+            overlayOpen = false;
+            if (web != null) web.evaluateJavascript("window.LiveTVCloseOverlay?.()", null);
             PictureInPictureParams params = new PictureInPictureParams.Builder()
                     .setAspectRatio(new Rational(16, 9))
                     .build();
@@ -227,15 +234,37 @@ public class MainActivity extends Activity {
         getWindow().setAttributes(attrs);
     }
 
+    private void setMediaVolumeNative(double value) {
+        try {
+            AudioManager audio = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+            if (audio == null) return;
+            int max = Math.max(1, audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC));
+            int target = (int) Math.round(Math.max(0d, Math.min(1d, value)) * max);
+            audio.setStreamVolume(AudioManager.STREAM_MUSIC, target, 0);
+        } catch (Exception ignored) {}
+    }
+
+    private double getMediaVolumeNative() {
+        try {
+            AudioManager audio = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+            if (audio == null) return 1d;
+            int max = Math.max(1, audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC));
+            return Math.max(0d, Math.min(1d, (double) audio.getStreamVolume(AudioManager.STREAM_MUSIC) / max));
+        } catch (Exception ignored) {
+            return 1d;
+        }
+    }
+
     @Override
     public void onPictureInPictureModeChanged(boolean isInPictureInPictureMode, Configuration newConfig) {
         super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig);
         if (web == null) return;
         if (isInPictureInPictureMode) {
-            web.evaluateJavascript("document.getElementById('operatorUi')?.classList.add('chrome-hidden')", null);
+            overlayOpen = false;
+            web.evaluateJavascript("window.LiveTVOnPipChanged?.(true)", null);
         } else if (playerMode) {
             applyImmersiveUi();
-            web.evaluateJavascript("window.LiveTVShowControls?.()", null);
+            web.evaluateJavascript("window.LiveTVOnPipChanged?.(false); window.LiveTVShowControls?.()", null);
         }
     }
 
@@ -255,6 +284,11 @@ public class MainActivity extends Activity {
     public void onBackPressed() {
         if (fullscreenView != null) {
             exitFullscreen();
+            return;
+        }
+        if (overlayOpen && web != null) {
+            overlayOpen = false;
+            web.evaluateJavascript("window.LiveTVCloseOverlay?.()", null);
             return;
         }
         if (playerMode || getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE) {
@@ -318,6 +352,21 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public void setBrightness(double value) {
             runOnUiThread(() -> setWindowBrightnessNative(value));
+        }
+
+        @JavascriptInterface
+        public void setMediaVolume(double value) {
+            runOnUiThread(() -> setMediaVolumeNative(value));
+        }
+
+        @JavascriptInterface
+        public double getMediaVolume() {
+            return getMediaVolumeNative();
+        }
+
+        @JavascriptInterface
+        public void setOverlayOpen(boolean value) {
+            overlayOpen = value;
         }
 
         private void putIfPresent(Map<String, String> target, String key, String value) {
