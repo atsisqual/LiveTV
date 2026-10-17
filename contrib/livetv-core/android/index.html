@@ -2,14 +2,31 @@
 <html lang="pt-PT">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>LiveTV Android</title>
+<title>LiveTV</title>
 <style>
-*{box-sizing:border-box}html,body{margin:0;height:100%;background:#0c0d0f;color:#fff;font-family:system-ui,-apple-system,sans-serif}body{display:flex;flex-direction:column}.top{padding:14px 16px 10px;background:#14161a;position:sticky;top:0;z-index:5}.title{font-size:20px;font-weight:750}.sub{font-size:12px;color:#aeb4bd;margin-top:2px}.tools{display:flex;gap:8px;margin-top:10px}.tools input,.tools select{min-width:0;background:#20242a;color:#fff;border:1px solid #353b44;border-radius:10px;padding:10px}.tools input{flex:1}.main{display:grid;grid-template-columns:minmax(250px,34%) 1fr;min-height:0;flex:1}.list{overflow:auto;border-right:1px solid #282c33}.row{display:flex;align-items:center;gap:12px;width:100%;padding:11px 13px;border:0;border-bottom:1px solid #20242a;background:transparent;color:#fff;text-align:left}.row:active,.row.active{background:#242932}.logo{width:50px;height:34px;object-fit:contain;background:#fff;border-radius:5px}.info{min-width:0;flex:1}.name{font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.group{font-size:11px;color:#99a0aa;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.player{min-width:0;background:#000;display:flex;flex-direction:column}.videoWrap{position:relative;flex:1;min-height:250px;display:flex;align-items:center;justify-content:center}video{width:100%;height:100%;max-height:100%;background:#000}.status{padding:8px 12px;background:#121418;color:#c6ccd5;font-size:12px;min-height:36px}.error{color:#ff8b8b}@media(max-width:760px){.main{grid-template-columns:1fr;grid-template-rows:44% 56%}.list{border-right:0;border-bottom:1px solid #282c33}.player{min-height:0}.videoWrap{min-height:0}.top{padding-top:max(12px,env(safe-area-inset-top))}}
+:root{color-scheme:dark}*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:#090b0f;color:#fff;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}body{background:radial-gradient(circle at top,#171c25 0,#0b0e13 34%,#07090c 100%);min-height:100vh}.app{max-width:1180px;margin:0 auto;padding:env(safe-area-inset-top) 18px 28px}.topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 0 14px}.brand{font-size:22px;font-weight:800;letter-spacing:-.02em}.summary{font-size:12px;color:#929aa7}.stage{background:#000;border-radius:20px;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.08)}live-video-player{display:block;width:100%}live-video-skin{display:block;width:100%;aspect-ratio:16/9;background:#000}video{width:100%;height:100%;background:#000}.now{display:flex;align-items:center;gap:12px;padding:12px 14px;background:rgba(15,18,24,.96);border-top:1px solid rgba(255,255,255,.07)}.nowLogo{width:44px;height:30px;object-fit:contain;border-radius:6px;background:#fff}.nowText{min-width:0;flex:1}.nowName{font-size:15px;font-weight:750;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.nowMeta{font-size:11px;color:#929aa7;margin-top:2px}.status{font-size:11px;color:#9da5b2;max-width:44%;text-align:right}.status.error{color:#ff8d96}.browse{margin-top:18px}.toolbar{display:flex;gap:10px;margin-bottom:12px}.toolbar input,.toolbar select{appearance:none;border:1px solid rgba(255,255,255,.09);background:#141820;color:#fff;border-radius:12px;padding:12px 13px;font:inherit;outline:none}.toolbar input{flex:1;min-width:0}.toolbar input:focus,.toolbar select:focus{border-color:rgba(112,174,255,.75);box-shadow:0 0 0 3px rgba(70,140,240,.12)}.channels{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.channel{border:1px solid rgba(255,255,255,.07);background:linear-gradient(180deg,rgba(28,33,43,.95),rgba(18,22,29,.95));color:#fff;border-radius:14px;padding:10px;display:flex;align-items:center;gap:10px;text-align:left;min-width:0;min-height:66px;box-shadow:0 8px 24px rgba(0,0,0,.16)}.channel:active{transform:scale(.985)}.channel.active{border-color:rgba(96,167,255,.85);background:linear-gradient(180deg,rgba(30,63,105,.96),rgba(20,39,65,.96));box-shadow:0 0 0 2px rgba(70,140,240,.12),0 10px 28px rgba(0,0,0,.24)}.channelLogo{width:50px;height:36px;object-fit:contain;background:#fff;border-radius:8px;flex:0 0 auto}.channelInfo{min-width:0}.channelName{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.channelGroup{font-size:10px;color:#98a1ae;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}@media(max-width:900px){.channels{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:680px){.app{padding-left:12px;padding-right:12px}.topbar{padding-top:12px}.channels{grid-template-columns:repeat(2,minmax(0,1fr))}.status{max-width:48%;font-size:10px}.toolbar{position:sticky;top:0;z-index:5;background:linear-gradient(#090b0f 72%,transparent);padding:8px 0 10px;margin-bottom:4px}.toolbar select{max-width:42%}}@media(max-width:380px){.channels{grid-template-columns:1fr}.now{align-items:flex-start}.status{max-width:42%}}
 </style>
 </head>
 <body>
-<div class="top"><div class="title">LiveTV Android</div><div class="sub" id="summary">A carregar lista embebida…</div><div class="tools"><input id="search" placeholder="Pesquisar canal"><select id="group"><option value="">Todos</option></select></div></div>
-<div class="main"><div id="list" class="list"></div><div class="player"><div class="videoWrap"><video id="video" controls playsinline></video></div><div id="status" class="status">Seleciona um canal.</div></div></div>
+<div class="app">
+  <header class="topbar"><div class="brand">LiveTV</div><div id="summary" class="summary">A carregar M3UPT…</div></header>
+  <section class="stage">
+    <live-video-player>
+      <live-video-skin>
+        <video id="video" playsinline></video>
+      </live-video-skin>
+    </live-video-player>
+    <div class="now">
+      <img id="nowLogo" class="nowLogo" alt="" hidden>
+      <div class="nowText"><div id="nowName" class="nowName">Seleciona um canal</div><div id="nowMeta" class="nowMeta">Video.js 10 · live-video-skin</div></div>
+      <div id="status" class="status">Pronto.</div>
+    </div>
+  </section>
+  <section class="browse">
+    <div class="toolbar"><input id="search" placeholder="Pesquisar canal" autocomplete="off"><select id="group"><option value="">Todos os grupos</option></select></div>
+    <div id="list" class="channels"></div>
+  </section>
+</div>
 <script src="app.js"></script>
 </body>
 </html>

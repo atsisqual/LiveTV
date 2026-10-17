@@ -1,3 +1,5 @@
+import '@videojs/html/live-video/player';
+import '@videojs/html/live-video/skin';
 import { EngineManager, parseM3U } from '../src/index.js';
 import * as hlsAdapterModule from '@videojs/hlsjs-video';
 import * as shakaAdapterModule from '@videojs/shaka-video';
@@ -10,6 +12,9 @@ const list = $('list');
 const search = $('search');
 const group = $('group');
 const summary = $('summary');
+const nowName = $('nowName');
+const nowMeta = $('nowMeta');
+const nowLogo = $('nowLogo');
 
 const channels = parseM3U(embeddedM3u, { source: 'M3UPT embedded' });
 let activeId = '';
@@ -18,6 +23,18 @@ let current = null;
 function setStatus(text, error = false) {
   status.textContent = text;
   status.classList.toggle('error', error);
+}
+
+function setNowPlaying(profile) {
+  nowName.textContent = profile?.name || 'Seleciona um canal';
+  nowMeta.textContent = profile ? (profile.group || 'Live TV') : 'Video.js 10 · live-video-skin';
+  if (profile?.logo) {
+    nowLogo.src = profile.logo;
+    nowLogo.hidden = false;
+  } else {
+    nowLogo.hidden = true;
+    nowLogo.removeAttribute('src');
+  }
 }
 
 function nativeHeaders(profile) {
@@ -66,11 +83,11 @@ function render() {
   const frag = document.createDocumentFragment();
   for (const c of items) {
     const b = document.createElement('button');
-    b.className = `row${activeId === c.id ? ' active' : ''}`;
+    b.className = `channel${activeId === c.id ? ' active' : ''}`;
     b.type = 'button';
     if (c.logo) {
       const img = document.createElement('img');
-      img.className = 'logo';
+      img.className = 'channelLogo';
       img.loading = 'lazy';
       img.referrerPolicy = 'no-referrer';
       img.src = c.logo;
@@ -79,26 +96,27 @@ function render() {
       b.appendChild(img);
     }
     const info = document.createElement('div');
-    info.className = 'info';
+    info.className = 'channelInfo';
     const n = document.createElement('div');
-    n.className = 'name';
+    n.className = 'channelName';
     n.textContent = c.name;
     const g = document.createElement('div');
-    g.className = 'group';
-    g.textContent = `${c.group || 'Sem grupo'} · ${c.type || 'auto'}`;
+    g.className = 'channelGroup';
+    g.textContent = c.group || 'Live TV';
     info.append(n, g);
     b.appendChild(info);
     b.onclick = () => play(c);
     frag.appendChild(b);
   }
   list.appendChild(frag);
-  summary.textContent = `${items.length}/${channels.length} canais · M3UPT embebido no APK`;
+  summary.textContent = `${items.length}/${channels.length} canais · M3UPT embebido`;
 }
 
 async function play(profile) {
   current = profile;
   activeId = profile.id;
   render();
+  setNowPlaying(profile);
   nativeHeaders(profile);
   setStatus(`${profile.name} · a iniciar…`);
   try {
@@ -122,4 +140,5 @@ for (const g of groups) {
 search.addEventListener('input', render);
 group.addEventListener('change', render);
 window.addEventListener('beforeunload', () => { clearNativeHeaders(); manager.destroy(); });
+setNowPlaying(null);
 render();

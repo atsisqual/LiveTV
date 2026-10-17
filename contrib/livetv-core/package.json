@@ -13,6 +13,7 @@
     "diagnostics:report": "node diagnostics/cli.js"
   },
   "dependencies": {
+    "@videojs/html": "10.1.0",
     "@videojs/hlsjs-video": "10.1.0",
     "@videojs/shaka-video": "10.1.0"
   },
