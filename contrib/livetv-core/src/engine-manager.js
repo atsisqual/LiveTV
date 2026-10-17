@@ -1,15 +1,23 @@
 import { normalizeStreamProfile, preferredEngines } from './stream-profile.js';
-import { retryDelay } from './network-policy.js';
+import { needsTransportProxy, retryDelay } from './network-policy.js';
 import { VideoJsEngine } from './engines/videojs-engine.js';
 import { ShakaEngine } from './engines/shaka-engine.js';
 
 export class EngineManager {
-  constructor({ videojs, shaka, transportResolver, onEvent = () => {}, maxSameEngineRecoveries = 2 } = {}) {
+  constructor({
+    videojs,
+    shaka,
+    transportResolver,
+    onEvent = () => {},
+    maxSameEngineRecoveries = 2,
+    stabilityWindowMs = 30000
+  } = {}) {
     this.videojs = videojs;
     this.shaka = shaka;
     this.transportResolver = transportResolver;
     this.onEvent = onEvent;
     this.maxSameEngineRecoveries = Math.max(0, Number(maxSameEngineRecoveries || 0));
+    this.stabilityWindowMs = Math.max(0, Number(stabilityWindowMs || 0));
     this.element = null;
     this.profile = null;
     this.order = [];
@@ -18,6 +26,7 @@ export class EngineManager {
     this.recoveryCount = 0;
     this.recovering = false;
     this.destroyed = false;
+    this.stabilityTimer = null;
   }
 
   emit(type, detail = {}) {
@@ -34,6 +43,20 @@ export class EngineManager {
     throw new Error(`Unknown playback engine: ${name}`);
   }
 
+  clearStabilityTimer() {
+    if (this.stabilityTimer) clearTimeout(this.stabilityTimer);
+    this.stabilityTimer = null;
+  }
+
+  armStabilityReset(engine) {
+    this.clearStabilityTimer();
+    if (!this.stabilityWindowMs || !this.recoveryCount) return;
+    this.stabilityTimer = setTimeout(() => {
+      this.recoveryCount = 0;
+      this.emit('recovery-budget-reset', { engine });
+    }, this.stabilityWindowMs);
+  }
+
   async load(element, input) {
     this.destroyed = false;
     await this.stopEngine();
@@ -42,8 +65,12 @@ export class EngineManager {
     this.order = preferredEngines(this.profile).filter((name) => name !== 'videojs' || this.videojs);
     this.engineIndex = -1;
     this.recoveryCount = 0;
-    let lastError;
 
+    if (!this.transportResolver && (needsTransportProxy(this.profile.headers) || needsTransportProxy(this.profile.drm?.headers))) {
+      this.emit('transport-required', { headers: this.profile.headers });
+    }
+
+    let lastError;
     for (let i = 0; i < this.order.length; i++) {
       try {
         return await this.startEngine(i, 'initial');
@@ -60,17 +87,19 @@ export class EngineManager {
     const name = this.order[index];
     if (!name) throw new Error('No fallback engine available');
     this.engineIndex = index;
+    if (reason !== 'same-engine-recovery') this.recoveryCount = 0;
     this.engine = this.createEngine(name);
     this.emit('engine-start', { engine: name, reason });
     const result = await this.engine.load(this.element, this.profile);
-    this.recoveryCount = 0;
     this.emit('engine-ready', { engine: name, reason });
+    this.armStabilityReset(name);
     return result;
   }
 
   async handleFatal(detail) {
     if (this.destroyed || this.recovering || !this.profile) return;
     this.recovering = true;
+    this.clearStabilityTimer();
     try {
       const currentName = this.order[this.engineIndex];
       this.emit('fatal', { engine: currentName, error: detail?.error || detail });
@@ -104,6 +133,7 @@ export class EngineManager {
   }
 
   async stopEngine() {
+    this.clearStabilityTimer();
     if (!this.engine) return;
     const instance = this.engine;
     this.engine = null;

@@ -5,6 +5,8 @@ const HEADER_MAP = new Map([
   ['origin', 'Origin']
 ]);
 
+const RESTRICTED_BROWSER_HEADERS = new Set(['user-agent', 'origin', 'referer', 'cookie', 'host']);
+
 export function canonicalHeaderName(name) {
   const key = String(name || '').trim().toLowerCase();
   if (HEADER_MAP.has(key)) return HEADER_MAP.get(key);
@@ -37,7 +39,8 @@ function normalizeDrm(drm = null) {
     keySystem: drm.keySystem || '',
     licenseUri: drm.licenseUri || drm.licenseUrl || '',
     headers: normalizeHeaders(drm.headers || {}),
-    clearKeys: { ...(drm.clearKeys || {}) }
+    clearKeys: { ...(drm.clearKeys || {}) },
+    rawLicenseKey: drm.rawLicenseKey || ''
   };
 
   if (!result.keySystem) {
@@ -74,9 +77,14 @@ export function normalizeStreamProfile(input = {}) {
   };
 }
 
+export function hasRestrictedRequestHeaders(headers = {}) {
+  return Object.keys(headers || {}).some((name) => RESTRICTED_BROWSER_HEADERS.has(name.toLowerCase()));
+}
+
 export function preferredEngines(input) {
   const profile = normalizeStreamProfile(input);
   const isDash = profile.type === 'application/dash+xml' || /\.mpd(?:$|[?#])/i.test(profile.url);
   const hasDrm = Boolean(profile.drm?.keySystem || profile.drm?.licenseUri || Object.keys(profile.drm?.clearKeys || {}).length);
-  return (isDash || hasDrm) ? ['shaka', 'videojs'] : ['videojs', 'shaka'];
+  const needsFullRequestControl = hasRestrictedRequestHeaders(profile.headers) || hasRestrictedRequestHeaders(profile.drm?.headers);
+  return (isDash || hasDrm || needsFullRequestControl) ? ['shaka', 'videojs'] : ['videojs', 'shaka'];
 }

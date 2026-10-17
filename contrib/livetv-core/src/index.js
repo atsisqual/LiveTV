@@ -1,7 +1,9 @@
 export { EngineManager } from './engine-manager.js';
 export { parseM3U } from './m3u-parser.js';
+export { PlaylistStore } from './playlist-store.js';
 export {
   canonicalHeaderName,
+  hasRestrictedRequestHeaders,
   inferMimeType,
   normalizeStreamProfile,
   preferredEngines

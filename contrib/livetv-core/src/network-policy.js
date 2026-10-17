@@ -38,7 +38,7 @@ export async function withRetry(task, policyInput = {}, onRetry = () => {}) {
       return await task(attempt);
     } catch (error) {
       lastError = error;
-      if (attempt >= policy.maxAttempts) break;
+      if (error?.retryable === false || attempt >= policy.maxAttempts) break;
       const delay = retryDelay(attempt, policy);
       onRetry({ attempt, delay, error });
       await new Promise((resolve) => setTimeout(resolve, delay));

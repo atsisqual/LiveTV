@@ -1,13 +1,13 @@
 {
   "name": "@livetv/playback-core",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
-  "description": "Robust playback backend for LiveTV: Video.js primary engine with Shaka fallback, M3U parsing, DRM, retry and recovery policies.",
+  "description": "Robust playback backend for LiveTV: Video.js primary engine with Shaka fallback, offline-first M3U loading, DRM, retry and recovery policies.",
   "exports": "./src/index.js",
   "scripts": {
     "test": "node --test test/*.test.js",
-    "check": "node --check src/index.js && node --check src/engine-manager.js && node --check src/m3u-parser.js"
+    "check": "node --check src/index.js && node --check src/engine-manager.js && node --check src/m3u-parser.js && node --check src/playlist-store.js && node --check src/network-policy.js && node --check src/stream-profile.js && node --check src/engines/videojs-engine.js && node --check src/engines/shaka-engine.js"
   },
   "peerDependencies": {
     "video.js": ">=10"

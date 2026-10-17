@@ -16,23 +16,34 @@ function parseAttributes(text) {
   return out;
 }
 
+function decodeValue(value) {
+  try { return decodeURIComponent(value); } catch { return value; }
+}
+
+function parseHeaderQuery(text = '') {
+  const headers = {};
+  for (const part of String(text).split('&')) {
+    if (!part) continue;
+    const eq = part.indexOf('=');
+    if (eq < 0) continue;
+    const key = decodeValue(part.slice(0, eq).trim());
+    const value = decodeValue(part.slice(eq + 1).trim());
+    if (key) headers[canonicalHeaderName(key.replace(/^http-/i, ''))] = value;
+  }
+  return headers;
+}
+
 function parsePipeOptions(line) {
   const pipe = line.indexOf('|');
   if (pipe < 0) return { url: line.trim(), headers: {} };
-  const url = line.slice(0, pipe).trim();
-  const headers = {};
-  for (const part of line.slice(pipe + 1).split('&')) {
-    const eq = part.indexOf('=');
-    if (eq < 0) continue;
-    const key = decodeURIComponent(part.slice(0, eq));
-    const value = decodeURIComponent(part.slice(eq + 1));
-    headers[canonicalHeaderName(key)] = value;
-  }
-  return { url, headers };
+  return {
+    url: line.slice(0, pipe).trim(),
+    headers: parseHeaderQuery(line.slice(pipe + 1))
+  };
 }
 
 function drmFromKodiProps(props) {
-  const licenseType = props['inputstream.adaptive.license_type'] || props['inputstreamaddon'] || '';
+  const licenseType = props['inputstream.adaptive.license_type'] || props.inputstreamaddon || '';
   const licenseKey = props['inputstream.adaptive.license_key'] || '';
   const lower = licenseType.toLowerCase();
   if (!licenseType && !licenseKey) return null;
@@ -40,6 +51,7 @@ function drmFromKodiProps(props) {
   const drm = {
     type: lower.includes('widevine') ? 'widevine' : (lower.includes('clearkey') ? 'clearkey' : lower),
     licenseUri: '',
+    headers: {},
     clearKeys: {},
     rawLicenseKey: licenseKey
   };
@@ -49,9 +61,19 @@ function drmFromKodiProps(props) {
     drm.type = 'clearkey';
     drm.clearKeys[kid.toLowerCase()] = key.toLowerCase();
   } else if (/^https?:\/\//i.test(licenseKey)) {
-    drm.licenseUri = licenseKey.split('|')[0];
+    const parts = licenseKey.split('|');
+    drm.licenseUri = parts[0];
+    if (parts[1]) drm.headers = parseHeaderQuery(parts[1]);
   }
   return drm;
+}
+
+function kodiRequestHeaders(props) {
+  return {
+    ...parseHeaderQuery(props['inputstream.adaptive.common_headers'] || ''),
+    ...parseHeaderQuery(props['inputstream.adaptive.manifest_headers'] || ''),
+    ...parseHeaderQuery(props['inputstream.adaptive.stream_headers'] || '')
+  };
 }
 
 function newPending() {
@@ -110,15 +132,25 @@ export function parseM3U(text, { source = 'm3u' } = {}) {
     if (line.startsWith('#')) continue;
 
     const pipe = parsePipeOptions(line);
-    const headers = { ...pending.headers, ...pending.extHttp, ...pipe.headers };
+    const headers = {
+      ...pending.headers,
+      ...pending.extHttp,
+      ...kodiRequestHeaders(pending.kodi),
+      ...pipe.headers
+    };
     const drm = drmFromKodiProps(pending.kodi);
+    const manifestType = String(pending.kodi['inputstream.adaptive.manifest_type'] || '').toLowerCase();
+    const type = manifestType === 'mpd'
+      ? 'application/dash+xml'
+      : (manifestType === 'hls' ? 'application/x-mpegURL' : inferMimeType(pipe.url));
+
     const profile = normalizeStreamProfile({
       id: pending.info['tvg-id'] || pending.info['channel-id'] || pending.name || pipe.url,
       name: pending.name || pending.info['tvg-name'] || pending.info['tvg-id'] || pipe.url,
       group: pending.group || pending.info['group-title'] || '',
       logo: pending.info['tvg-logo'] || '',
       url: pipe.url,
-      type: pending.kodi['inputstream.adaptive.manifest_type'] === 'mpd' ? 'application/dash+xml' : inferMimeType(pipe.url),
+      type,
       headers,
       drm,
       metadata: {
