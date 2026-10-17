@@ -24,20 +24,31 @@ jobs:
           cp -a .bootstrap-overlay/contrib/livetv-core /tmp/livetv-overlay/contrib/
           cp .bootstrap-overlay/LIVETV.md /tmp/livetv-overlay/LIVETV.md
 
-      - name: Fetch Video.js upstream with history
+      - name: Fetch Video.js upstream snapshot
         run: |
           git remote remove videojs 2>/dev/null || true
           git remote add videojs https://github.com/videojs/video.js.git
-          git fetch videojs main --tags
+          git fetch --depth=1 videojs main
+          git rev-parse videojs/main | tee /tmp/videojs-upstream-sha
 
-      - name: Rebase main onto Video.js and apply LiveTV backend
+      - name: Create clean Video.js snapshot with LiveTV backend
         run: |
+          rm -rf /tmp/videojs-snapshot
+          mkdir -p /tmp/videojs-snapshot
+          git archive videojs/main | tar -x -C /tmp/videojs-snapshot
+          rm -rf /tmp/videojs-snapshot/.github/workflows
+          cp -a /tmp/livetv-overlay/. /tmp/videojs-snapshot/
+          printf '\nUpstream Video.js commit: `%s`\n' "$(cat /tmp/videojs-upstream-sha)" >> /tmp/videojs-snapshot/LIVETV.md
+
           git config user.name "atsisqual"
           git config user.email "327089646+atsisqual@users.noreply.github.com"
-          git checkout -B main videojs/main
-          cp -a /tmp/livetv-overlay/. .
-          git add LIVETV.md contrib/livetv-core
-          git commit -m "Add LiveTV robust playback backend on Video.js"
+          git checkout --orphan imported-main
+          git rm -rf .
+          cp -a /tmp/videojs-snapshot/. .
+          git add -A
+          git commit -m "Bootstrap LiveTV from Video.js with robust playback core"
+          git branch -D main 2>/dev/null || true
+          git branch -m main
 
       - name: Validate LiveTV playback core
         working-directory: contrib/livetv-core
@@ -45,6 +56,6 @@ jobs:
           npm run check
           npm test
 
-      - name: Import Video.js history into main
+      - name: Replace main with clean Video.js snapshot
         run: |
           git push origin main --force
