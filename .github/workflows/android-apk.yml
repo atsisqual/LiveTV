@@ -82,3 +82,5 @@ jobs:
           TAG=android-test-v0.2.0
           gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "LiveTV Android Test v0.2.0" --notes "Android test build: embedded M3UPT, Video.js 10 HLS adapter, Shaka fallback for DASH/DRM, native WebView request headers." --prerelease
           gh release upload "$TAG" LiveTV-Android-Test-v0.2.0.apk --clobber
+
+# touch: ensure the Android build is triggered from the LiveTV repository
