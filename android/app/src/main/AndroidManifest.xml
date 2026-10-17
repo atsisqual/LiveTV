@@ -6,7 +6,7 @@
     <application
         android:allowBackup="true"
         android:hardwareAccelerated="true"
-        android:label="LiveTV Android Test"
+        android:label="LiveTV"
         android:supportsRtl="true"
         android:usesCleartextTraffic="true"
         android:theme="@android:style/Theme.Material.NoActionBar">
