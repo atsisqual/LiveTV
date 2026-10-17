@@ -36,7 +36,7 @@ jobs:
         working-directory: contrib/livetv-core
         run: npm test
 
-      - name: Apply Android v0.9 player layer
+      - name: Apply Android v0.9.1 parity layer
         run: node contrib/livetv-core/android/v070-build-patch.mjs
 
       - name: Bundle Android web player
@@ -72,20 +72,20 @@ jobs:
           APK=android/app/build/outputs/apk/debug/app-debug.apk
           test -f "$APK"
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep "package: name='com.atsisqual.livetv.shaka'"
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep "versionName='0.9.0'"
-          cp "$APK" LiveTV-Android-Test-v0.9.0.apk
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep "versionName='0.9.1'"
+          cp "$APK" LiveTV-Android-Test-v0.9.1.apk
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
         with:
-          name: LiveTV-Android-Test-v0.9.0
-          path: LiveTV-Android-Test-v0.9.0.apk
+          name: LiveTV-Android-Test-v0.9.1
+          path: LiveTV-Android-Test-v0.9.1.apk
           if-no-files-found: error
 
       - name: Publish test APK release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          TAG=android-test-v0.9.0
-          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "LiveTV Android Test v0.9.0" --notes "Player UI and interactions reimplemented from analysis of the provided decompiled reference app: 48dp operator controls, 280dp side drawer, 76dp recent-channel cards, matching dark/accent palette, draggable drawer, swipe-up/right-edge channel access, swipe-to-unlock, live-edge action, and DVR scrub tooltip. Playback backend remains Video.js 10 + HLS/Shaka with M3UPT." --prerelease
-          gh release upload "$TAG" LiveTV-Android-Test-v0.9.0.apk --clobber
+          TAG=android-test-v0.9.1
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "LiveTV Android Test v0.9.1" --notes "Parity correction based on direct comparison with the provided decompiled MEO Go 6.13.3 resources. Timeline now follows the original 48dp ConstraintLayout geometry instead of an approximate flex layout, eliminating clipped Canais/Programação labels. Side drawer uses the verified 280dp MotionScene width, 250ms linear transition, exact 76dp three-column channel geometry and original Portuguese search copy. Playback backend remains Video.js 10 + HLS/Shaka with M3UPT." --prerelease
+          gh release upload "$TAG" LiveTV-Android-Test-v0.9.1.apk --clobber
