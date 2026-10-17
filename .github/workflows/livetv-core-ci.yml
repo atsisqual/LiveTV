@@ -45,6 +45,28 @@ jobs:
         working-directory: contrib/livetv-core
         run: npm run diagnostics:build
 
+      - name: Smoke test diagnostics server
+        working-directory: contrib/livetv-core
+        shell: bash
+        run: |
+          set -euo pipefail
+          node diagnostics/server.js >/tmp/livetv-diagnostics.log 2>&1 &
+          server_pid=$!
+          trap 'kill $server_pid 2>/dev/null || true' EXIT
+          for attempt in {1..20}; do
+            if curl --fail --silent http://127.0.0.1:4177/api/meta -o /tmp/livetv-meta.json; then
+              break
+            fi
+            sleep 0.25
+          done
+          cat /tmp/livetv-diagnostics.log
+          node - <<'NODE'
+          const fs = require('fs');
+          const meta = JSON.parse(fs.readFileSync('/tmp/livetv-meta.json', 'utf8'));
+          if (!(meta.parsedChannels > 900)) throw new Error(`Expected >900 parsed M3UPT channels, got ${meta.parsedChannels}`);
+          console.log(`Diagnostics server parsed ${meta.parsedChannels} channels from ${meta.extinfEntries} EXTINF entries`);
+          NODE
+
       - name: Import official Video.js 10 adapters
         working-directory: contrib/livetv-core
         run: node -e "Promise.all([import('@videojs/hlsjs-video'), import('@videojs/shaka-video')]).then(() => console.log('Video.js adapters OK'))"
