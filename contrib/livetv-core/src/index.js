@@ -1,6 +1,7 @@
 export { EngineManager } from './engine-manager.js';
 export { parseM3U } from './m3u-parser.js';
 export { PlaylistStore } from './playlist-store.js';
+export { probePlaylist, probeStream } from './diagnostics.js';
 export {
   canonicalHeaderName,
   hasRestrictedRequestHeaders,
@@ -12,6 +13,7 @@ export {
   browserSafeHeaders,
   createRetryPolicy,
   needsTransportProxy,
+  resolveTransportUrl,
   retryDelay,
   withRetry
 } from './network-policy.js';

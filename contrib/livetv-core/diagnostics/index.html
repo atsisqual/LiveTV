@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="pt-PT">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>LiveTV · Diagnóstico M3UPT</title>
+  <style>
+    :root{font-family:system-ui,sans-serif;color-scheme:dark;background:#111;color:#eee}body{margin:0;padding:18px}h1{margin:0 0 6px;font-size:22px}.muted,small{color:#aaa}header{position:sticky;top:0;background:#111;padding-bottom:12px;z-index:2}.controls{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}.controls input,.controls select,.controls button,td button{background:#222;color:#eee;border:1px solid #444;border-radius:6px;padding:7px 9px}.controls input{min-width:280px}.controls button,td button{cursor:pointer}.controls button:disabled{opacity:.5;cursor:default}.player{display:grid;grid-template-columns:minmax(280px,520px) 1fr;gap:14px;align-items:center;margin:12px 0;padding:10px;background:#181818;border:1px solid #333;border-radius:8px}.player video{width:100%;background:#000;aspect-ratio:16/9}table{width:100%;border-collapse:collapse;font-size:12px}th,td{border-bottom:1px solid #2b2b2b;padding:7px;text-align:left;vertical-align:middle}th{position:sticky;top:151px;background:#181818;z-index:1}.name{min-width:180px}.name img{width:44px;height:28px;object-fit:contain;vertical-align:middle;margin-right:8px;background:#fff;border-radius:3px}.name span{display:inline-flex;flex-direction:column;vertical-align:middle}.name small{margin-top:2px}.ok{color:#7ee787;font-weight:700}.bad{color:#ff7b72;font-weight:700}.running{color:#d29922;font-weight:700}.error{max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.actions{white-space:nowrap}.actions button{padding:5px;margin-right:4px}@media(max-width:900px){body{padding:10px}.player{grid-template-columns:1fr}table{display:block;overflow-x:auto}th{top:195px}}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Diagnóstico LiveTV / M3UPT</h1>
+    <div id="snapshot" class="muted">A carregar...</div>
+    <div class="controls">
+      <input id="search" type="search" placeholder="Filtrar por canal, grupo, ID ou URL">
+      <select id="group"></select>
+      <label>Concorrência <input id="concurrency" type="number" value="6" min="1" max="20" style="min-width:60px;width:60px"></label>
+      <button id="probeVisible">Diagnosticar canais visíveis</button>
+      <button id="stop" disabled>Parar</button>
+      <span id="count"></span>
+    </div>
+    <div id="status" class="muted"></div>
+  </header>
+
+  <section class="player">
+    <video id="smokeVideo" controls muted playsinline></video>
+    <div><strong>Playback real</strong><div id="nowPlaying" class="muted">Seleciona “Playback” num canal.</div><small>Usa os adapters oficiais Video.js 10 e o proxy local apenas para headers que o browser não pode definir.</small></div>
+  </section>
+
+  <table>
+    <thead><tr><th>#</th><th>Canal</th><th>Headers</th><th>DRM</th><th>Rede</th><th>HTTP M/V/S</th><th>Codec</th><th>Engine</th><th>Fallback</th><th>Latência</th><th>Playback</th><th>Erro</th><th>Ações</th></tr></thead>
+    <tbody id="rows"></tbody>
+  </table>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

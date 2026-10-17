@@ -1,0 +1,49 @@
+name: M3UPT live diagnostics
+
+on:
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: 'Maximum channels to probe (0 = all)'
+        required: true
+        default: '50'
+      concurrency:
+        description: 'Concurrent probes'
+        required: true
+        default: '6'
+      timeout_ms:
+        description: 'Per-request timeout in milliseconds'
+        required: true
+        default: '10000'
+
+permissions:
+  contents: read
+
+jobs:
+  diagnostics:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install playback core dependencies
+        working-directory: contrib/livetv-core
+        run: npm install --package-lock=false --ignore-scripts --no-audit --no-fund
+
+      - name: Probe embedded M3UPT snapshot
+        working-directory: contrib/livetv-core
+        run: npm run diagnostics:report -- --limit "${{ inputs.limit }}" --concurrency "${{ inputs.concurrency }}" --timeout "${{ inputs.timeout_ms }}" --out m3upt-diagnostics.json
+
+      - name: Upload report
+        uses: actions/upload-artifact@v4
+        with:
+          name: m3upt-diagnostics
+          path: contrib/livetv-core/m3upt-diagnostics.json
+          if-no-files-found: error
+          retention-days: 14

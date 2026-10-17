@@ -47,8 +47,14 @@ export async function withRetry(task, policyInput = {}, onRetry = () => {}) {
   throw lastError;
 }
 
-export async function resolveTransportUrl(profile, url, requestType, transportResolver) {
+export async function resolveTransportUrl(
+  profile,
+  url,
+  requestType,
+  transportResolver,
+  headers = profile?.headers || {}
+) {
   if (!transportResolver) return url;
-  const result = await transportResolver({ profile, url, requestType, headers: profile.headers });
+  const result = await transportResolver({ profile, url, requestType, headers });
   return typeof result === 'string' ? result : (result?.url || url);
 }

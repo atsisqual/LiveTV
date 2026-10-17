@@ -5,19 +5,21 @@ import { ShakaEngine } from './engines/shaka-engine.js';
 
 export class EngineManager {
   constructor({
-    videojs,
-    shaka,
+    hlsAdapterModule,
+    shakaAdapterModule,
     transportResolver,
     onEvent = () => {},
     maxSameEngineRecoveries = 2,
-    stabilityWindowMs = 30000
+    stabilityWindowMs = 30000,
+    readinessTimeoutMs = 15000
   } = {}) {
-    this.videojs = videojs;
-    this.shaka = shaka;
+    this.hlsAdapterModule = hlsAdapterModule;
+    this.shakaAdapterModule = shakaAdapterModule;
     this.transportResolver = transportResolver;
     this.onEvent = onEvent;
     this.maxSameEngineRecoveries = Math.max(0, Number(maxSameEngineRecoveries || 0));
     this.stabilityWindowMs = Math.max(0, Number(stabilityWindowMs || 0));
+    this.readinessTimeoutMs = Math.max(1000, Number(readinessTimeoutMs || 15000));
     this.element = null;
     this.profile = null;
     this.order = [];
@@ -36,10 +38,15 @@ export class EngineManager {
   createEngine(name) {
     const common = {
       transportResolver: this.transportResolver,
+      readinessTimeoutMs: this.readinessTimeoutMs,
       onFatal: (detail) => this.handleFatal(detail)
     };
-    if (name === 'videojs') return new VideoJsEngine({ ...common, videojs: this.videojs });
-    if (name === 'shaka') return new ShakaEngine({ ...common, shaka: this.shaka });
+    if (name === 'videojs') {
+      return new VideoJsEngine({ ...common, adapterModule: this.hlsAdapterModule });
+    }
+    if (name === 'shaka') {
+      return new ShakaEngine({ ...common, adapterModule: this.shakaAdapterModule });
+    }
     throw new Error(`Unknown playback engine: ${name}`);
   }
 
@@ -58,15 +65,19 @@ export class EngineManager {
   }
 
   async load(element, input) {
+    if (!element) throw new Error('Playback requires a media element');
     this.destroyed = false;
     await this.stopEngine();
     this.element = element;
     this.profile = normalizeStreamProfile(input);
-    this.order = preferredEngines(this.profile).filter((name) => name !== 'videojs' || this.videojs);
+    this.order = preferredEngines(this.profile);
     this.engineIndex = -1;
     this.recoveryCount = 0;
 
-    if (!this.transportResolver && (needsTransportProxy(this.profile.headers) || needsTransportProxy(this.profile.drm?.headers))) {
+    if (!this.transportResolver && (
+      needsTransportProxy(this.profile.headers) ||
+      needsTransportProxy(this.profile.drm?.headers)
+    )) {
       this.emit('transport-required', { headers: this.profile.headers });
     }
 

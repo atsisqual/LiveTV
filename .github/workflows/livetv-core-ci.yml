@@ -40,3 +40,11 @@ jobs:
       - name: Unit tests
         working-directory: contrib/livetv-core
         run: npm test
+
+      - name: Build diagnostic page
+        working-directory: contrib/livetv-core
+        run: npm run diagnostics:build
+
+      - name: Import official Video.js 10 adapters
+        working-directory: contrib/livetv-core
+        run: node -e "Promise.all([import('@videojs/hlsjs-video'), import('@videojs/shaka-video')]).then(() => console.log('Video.js adapters OK'))"
