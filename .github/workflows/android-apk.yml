@@ -32,6 +32,9 @@ jobs:
         working-directory: contrib/livetv-core
         run: npm test
 
+      - name: Apply Android v0.7 player layer
+        run: node contrib/livetv-core/android/v070-build-patch.mjs
+
       - name: Bundle Android web player
         working-directory: contrib/livetv-core
         run: |
@@ -65,20 +68,20 @@ jobs:
           APK=android/app/build/outputs/apk/debug/app-debug.apk
           test -f "$APK"
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep "package: name='com.atsisqual.livetv.shaka'"
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep "versionName='0.6.0'"
-          cp "$APK" LiveTV-Android-Test-v0.6.0.apk
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep "versionName='0.7.0'"
+          cp "$APK" LiveTV-Android-Test-v0.7.0.apk
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
         with:
-          name: LiveTV-Android-Test-v0.6.0
-          path: LiveTV-Android-Test-v0.6.0.apk
+          name: LiveTV-Android-Test-v0.7.0
+          path: LiveTV-Android-Test-v0.7.0.apk
           if-no-files-found: error
 
       - name: Publish test APK release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          TAG=android-test-v0.6.0
-          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "LiveTV Android Test v0.6.0" --notes "Landscape-first channel playback with operator-style controls and runtime M3UPT EPG integration. Current programme, programme times, channel rail and guide are shown over the live player. Backend remains Video.js 10 + HLS/Shaka fallback with embedded M3UPT and native request headers." --prerelease
-          gh release upload "$TAG" LiveTV-Android-Test-v0.6.0.apk --clobber
+          TAG=android-test-v0.7.0
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "LiveTV Android Test v0.7.0" --notes "Operator-style landscape player refinement: right-side channels and EPG drawers, recent channels, grid/list views, PiP, screen modes, playback speed, lock mode, brightness and volume controls. M3UPT EPG programme artwork is used when available. Backend remains Video.js 10 + HLS/Shaka fallback with embedded M3UPT and native request headers." --prerelease
+          gh release upload "$TAG" LiveTV-Android-Test-v0.7.0.apk --clobber
