@@ -1,10 +1,13 @@
 package com.atsisqual.livetv.shaka;
 
 import android.app.Activity;
+import android.app.PictureInPictureParams;
 import android.content.pm.ActivityInfo;
 import android.content.res.Configuration;
 import android.graphics.Color;
+import android.os.Build;
 import android.os.Bundle;
+import android.util.Rational;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
@@ -207,6 +210,35 @@ public class MainActivity extends Activity {
         leaveImmersiveUi();
     }
 
+    private void enterPictureInPictureNative() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || !playerMode || isInPictureInPictureMode()) return;
+        try {
+            PictureInPictureParams params = new PictureInPictureParams.Builder()
+                    .setAspectRatio(new Rational(16, 9))
+                    .build();
+            enterPictureInPictureMode(params);
+        } catch (Exception ignored) {}
+    }
+
+    private void setWindowBrightnessNative(double value) {
+        float brightness = (float) Math.max(0.08d, Math.min(1.0d, value));
+        WindowManager.LayoutParams attrs = getWindow().getAttributes();
+        attrs.screenBrightness = brightness;
+        getWindow().setAttributes(attrs);
+    }
+
+    @Override
+    public void onPictureInPictureModeChanged(boolean isInPictureInPictureMode, Configuration newConfig) {
+        super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig);
+        if (web == null) return;
+        if (isInPictureInPictureMode) {
+            web.evaluateJavascript("document.getElementById('operatorUi')?.classList.add('chrome-hidden')", null);
+        } else if (playerMode) {
+            applyImmersiveUi();
+            web.evaluateJavascript("window.LiveTVShowControls?.()", null);
+        }
+    }
+
     private void exitFullscreen() {
         if (fullscreenView == null) return;
         root.removeView(fullscreenView);
@@ -276,6 +308,16 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public void exitPlaybackMode() {
             runOnUiThread(() -> exitPlaybackModeNative());
+        }
+
+        @JavascriptInterface
+        public void enterPictureInPicture() {
+            runOnUiThread(() -> enterPictureInPictureNative());
+        }
+
+        @JavascriptInterface
+        public void setBrightness(double value) {
+            runOnUiThread(() -> setWindowBrightnessNative(value));
         }
 
         private void putIfPresent(Map<String, String> target, String key, String value) {
