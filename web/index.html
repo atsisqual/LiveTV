@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="pt-PT">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>LiveTV Shaka Test</title>
+<style>
+:root{color-scheme:dark;--bg:#090b0f;--surface:#131821;--surface2:#1a202b;--line:#283141;--text:#f5f7fa;--muted:#8f9aaa;--accent:#ff385b}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif}button,input,select{font:inherit}.app{min-height:100vh}.top{position:sticky;top:0;z-index:10;padding:14px 16px;background:rgba(9,11,15,.96);backdrop-filter:blur(12px);border-bottom:1px solid #151b24}.title{font-size:20px;font-weight:850}.sub{font-size:12px;color:var(--muted);margin-top:3px}.tools{display:flex;gap:8px;margin-top:12px}.search,.group{height:44px;border-radius:13px;border:1px solid var(--line);background:var(--surface);color:var(--text);padding:0 12px}.search{flex:1;min-width:0}.group{max-width:42%}.content{padding:14px 14px 30px}.status{font-size:12px;color:var(--muted);margin:0 2px 12px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.card{border:1px solid var(--line);border-radius:16px;background:linear-gradient(155deg,#171d27,#10141b);padding:12px;display:flex;align-items:center;gap:10px;min-width:0}.card:active{transform:scale(.98);background:#1a202a}.logo{width:48px;height:48px;border-radius:11px;background:#fff;object-fit:contain;padding:5px;flex:0 0 auto}.fallback{width:48px;height:48px;border-radius:11px;background:#232b38;display:grid;place-items:center;font-weight:900;flex:0 0 auto}.meta{min-width:0}.name{font-size:13px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.groupname{font-size:11px;color:var(--muted);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.player{position:fixed;inset:0;background:#000;z-index:100;display:none;flex-direction:column}.player.show{display:flex}.playerbar{height:54px;display:flex;align-items:center;gap:10px;padding:0 12px;background:#0a0d12;border-bottom:1px solid #1c2330}.back{height:38px;border:0;border-radius:11px;background:#202734;color:#fff;padding:0 13px;font-weight:750}.playertitle{font-size:14px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.videoWrap{flex:1;display:grid;place-items:center;min-height:0}.videoWrap video{width:100%;height:100%;background:#000}.playerstatus{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);background:rgba(5,8,12,.8);border:1px solid rgba(255,255,255,.12);border-radius:999px;padding:8px 12px;font-size:12px;color:#d9dfe7;max-width:88%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.empty{padding:40px 18px;text-align:center;color:var(--muted);border:1px dashed #2b3544;border-radius:16px}.badge{display:inline-flex;align-items:center;padding:3px 7px;border-radius:999px;background:#2a313e;color:#aeb8c7;font-size:10px;margin-top:5px}@media(min-width:700px){.grid{grid-template-columns:repeat(4,minmax(0,1fr))}}@media(orientation:landscape){.grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="title">LiveTV Shaka Test</div>
+    <div class="sub">M3UPT · Shaka Player 5.3.0</div>
+    <div class="tools">
+      <input id="search" class="search" type="search" placeholder="Procurar canal…" autocomplete="off">
+      <select id="group" class="group"><option value="">Todos</option></select>
+    </div>
+  </header>
+  <main class="content">
+    <div id="status" class="status">A carregar M3UPT…</div>
+    <div id="grid" class="grid"></div>
+    <div id="empty" class="empty" hidden>Nenhum canal encontrado.</div>
+  </main>
+</div>
+
+<section id="playerView" class="player" aria-hidden="true">
+  <div class="playerbar">
+    <button id="back" class="back">← Canais</button>
+    <div id="playerTitle" class="playertitle"></div>
+  </div>
+  <div class="videoWrap"><video id="video" controls autoplay playsinline></video></div>
+  <div id="playerStatus" class="playerstatus">A preparar…</div>
+</section>
+
+<script src="shaka-player.compiled.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+let channels=[];
+let player=null;
+let query='';
+let selectedGroup='';
+
+function txt(v){return String(v==null?'':v).trim()}
+function initials(name){return txt(name).split(/\s+/).filter(Boolean).slice(0,2).map(x=>x[0]).join('').toUpperCase()||'TV'}
+function parseAttrs(line){const out={};const re=/([\w-]+)="([^"]*)"/g;let m;while((m=re.exec(line)))out[m[1]]=m[2];return out}
+function stripKid(v){return txt(v).replace(/-/g,'').toLowerCase()}
+
+function parseM3U(raw){
+  const out=[];
+  const lines=String(raw||'').replace(/\r/g,'').split('\n');
+  let pending=null;
+  for(const source of lines){
+    const line=source.trim();
+    if(!line)continue;
+    if(line.startsWith('#EXTINF')){
+      const attrs=parseAttrs(line);
+      const comma=line.indexOf(',');
+      pending={
+        name:comma>=0?txt(line.slice(comma+1)):'Canal',
+        tvgId:txt(attrs['tvg-id']),
+        logo:txt(attrs['tvg-logo']),
+        group:txt(attrs['group-title'])||'Outros',
+        headers:{},
+        licenseType:'',
+        licenseKey:'',
+        manifestType:''
+      };
+      continue;
+    }
+    if(!pending)continue;
+    if(line.startsWith('#EXTGRP:')){pending.group=txt(line.slice(8))||pending.group;continue}
+    if(line.startsWith('#EXTVLCOPT:')){
+      const p=line.slice(11);const eq=p.indexOf('=');if(eq<0)continue;
+      const key=p.slice(0,eq).toLowerCase(),value=txt(p.slice(eq+1));
+      if(key==='http-user-agent'||key==='user-agent')pending.headers.userAgent=value;
+      if(key==='http-referrer'||key==='http-referer'||key==='referer')pending.headers.referer=value;
+      if(key==='http-origin'||key==='origin')pending.headers.origin=value;
+      continue;
+    }
+    if(line.startsWith('#KODIPROP:')){
+      const p=line.slice(10);const eq=p.indexOf('=');if(eq<0)continue;
+      const key=p.slice(0,eq).toLowerCase(),value=txt(p.slice(eq+1));
+      if(key.endsWith('license_type'))pending.licenseType=value;
+      if(key.endsWith('license_key'))pending.licenseKey=value;
+      if(key.endsWith('manifest_type'))pending.manifestType=value;
+      continue;
+    }
+    if(line.startsWith('#'))continue;
+    if(/^https?:\/\//i.test(line)){
+      pending.url=line;
+      out.push(pending);
+      pending=null;
+    }
+  }
+  return out;
+}
+
+function renderGroups(){
+  const select=$('group');
+  const groups=[...new Set(channels.map(x=>x.group).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt'));
+  select.innerHTML='<option value="">Todos</option>';
+  groups.forEach(g=>{const o=document.createElement('option');o.value=g;o.textContent=g;select.appendChild(o)});
+}
+
+function shownChannels(){
+  const q=query.toLocaleLowerCase('pt');
+  return channels.filter(c=>(!selectedGroup||c.group===selectedGroup)&&(!q||(c.name+' '+c.group).toLocaleLowerCase('pt').includes(q)));
+}
+
+function render(){
+  const grid=$('grid');grid.innerHTML='';
+  const list=shownChannels();
+  $('empty').hidden=list.length!==0;
+  $('status').textContent=`${channels.length} canais carregados · ${list.length} visíveis`;
+  for(const ch of list){
+    const card=document.createElement('div');card.className='card';card.tabIndex=0;card.onclick=()=>openChannel(ch);card.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openChannel(ch)}};
+    let visual;
+    if(ch.logo){visual=document.createElement('img');visual.className='logo';visual.src=ch.logo;visual.alt='';visual.referrerPolicy='no-referrer';visual.onerror=()=>{const f=document.createElement('div');f.className='fallback';f.textContent=initials(ch.name);visual.replaceWith(f)}}
+    else{visual=document.createElement('div');visual.className='fallback';visual.textContent=initials(ch.name)}
+    const meta=document.createElement('div');meta.className='meta';
+    const n=document.createElement('div');n.className='name';n.textContent=ch.name;
+    const g=document.createElement('div');g.className='groupname';g.textContent=ch.group;
+    meta.append(n,g);
+    if(ch.licenseKey){const b=document.createElement('div');b.className='badge';b.textContent='DRM';meta.appendChild(b)}
+    card.append(visual,meta);grid.appendChild(card);
+  }
+}
+
+async function ensurePlayer(){
+  if(player)return player;
+  shaka.polyfill.installAll();
+  if(!shaka.Player.isBrowserSupported())throw new Error('Shaka não é suportado neste WebView');
+  player=new shaka.Player();
+  await player.attach($('video'));
+  player.addEventListener('error',e=>{const d=e.detail||{};$('playerStatus').textContent='Erro Shaka '+(d.code||'desconhecido')});
+  player.configure({streaming:{bufferingGoal:18,rebufferingGoal:2,lowLatencyMode:false}});
+  return player;
+}
+
+function configureDrm(p,ch){
+  p.configure({drm:{clearKeys:{},servers:{}}});
+  const raw=txt(ch.licenseKey);
+  const m=raw.match(/^([0-9a-fA-F-]{16,64}):([0-9a-fA-F]{16,64})$/);
+  if(m){
+    const kid=stripKid(m[1]),key=stripKid(m[2]);
+    if(kid&&key){const keys={};keys[kid]=key;p.configure({drm:{clearKeys:keys}})}
+  }
+}
+
+async function openChannel(ch){
+  $('playerView').classList.add('show');$('playerView').setAttribute('aria-hidden','false');
+  $('playerTitle').textContent=ch.name;$('playerStatus').textContent='A preparar '+ch.name+'…';
+  try{if(window.LiveTVNative)window.LiveTVNative.setPlaybackHeaders(JSON.stringify(ch.headers||{}))}catch(e){}
+  try{
+    const p=await ensurePlayer();
+    await p.unload();
+    configureDrm(p,ch);
+    await p.load(ch.url);
+    $('video').play().catch(()=>{});
+    $('playerStatus').textContent=(ch.manifestType?ch.manifestType.toUpperCase()+' · ':'')+'A reproduzir';
+    setTimeout(()=>{$('playerStatus').textContent=''},2200);
+  }catch(e){
+    console.error(e);
+    $('playerStatus').textContent='Não foi possível reproduzir: '+(e&&e.message?e.message:String(e));
+  }
+}
+
+async function closePlayer(){
+  try{if(player)await player.unload()}catch(e){}
+  try{if(window.LiveTVNative)window.LiveTVNative.clearPlaybackHeaders()}catch(e){}
+  $('video').removeAttribute('src');$('video').load();
+  $('playerView').classList.remove('show');$('playerView').setAttribute('aria-hidden','true');
+}
+
+async function boot(){
+  try{
+    const r=await fetch('M3UPT.m3u',{cache:'no-store'});
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    channels=parseM3U(await r.text());
+    renderGroups();render();
+  }catch(e){
+    $('status').textContent='Falha ao carregar M3UPT';
+    $('empty').hidden=false;$('empty').textContent='Não foi possível carregar a lista base: '+e.message;
+  }
+}
+
+$('search').addEventListener('input',e=>{query=e.target.value||'';render()});
+$('group').addEventListener('change',e=>{selectedGroup=e.target.value||'';render()});
+$('back').addEventListener('click',closePlayer);
+window.addEventListener('popstate',()=>{if($('playerView').classList.contains('show'))closePlayer()});
+boot();
+</script>
+</body>
+</html>
