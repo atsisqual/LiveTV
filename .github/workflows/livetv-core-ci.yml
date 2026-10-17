@@ -1,0 +1,42 @@
+name: LiveTV playback core
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'contrib/livetv-core/**'
+      - 'LIVETV.md'
+      - '.github/workflows/livetv-core-ci.yml'
+  pull_request:
+    paths:
+      - 'contrib/livetv-core/**'
+      - 'LIVETV.md'
+      - '.github/workflows/livetv-core-ci.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  playback-core:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install playback core dependencies
+        working-directory: contrib/livetv-core
+        run: npm install --package-lock=false --ignore-scripts --no-audit --no-fund
+
+      - name: Syntax check
+        working-directory: contrib/livetv-core
+        run: npm run check
+
+      - name: Unit tests
+        working-directory: contrib/livetv-core
+        run: npm test
