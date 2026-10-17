@@ -17,11 +17,12 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Preserve LiveTV overlay
+      - name: Preserve LiveTV backend overlay
         run: |
           rm -rf /tmp/livetv-overlay
-          mkdir -p /tmp/livetv-overlay
-          cp -a .bootstrap-overlay/. /tmp/livetv-overlay/
+          mkdir -p /tmp/livetv-overlay/contrib
+          cp -a .bootstrap-overlay/contrib/livetv-core /tmp/livetv-overlay/contrib/
+          cp .bootstrap-overlay/LIVETV.md /tmp/livetv-overlay/LIVETV.md
 
       - name: Fetch Video.js upstream with history
         run: |
@@ -34,9 +35,8 @@ jobs:
           git config user.name "atsisqual"
           git config user.email "327089646+atsisqual@users.noreply.github.com"
           git checkout -B main videojs/main
-          rm -rf .github/workflows
           cp -a /tmp/livetv-overlay/. .
-          git add -A
+          git add LIVETV.md contrib/livetv-core
           git commit -m "Add LiveTV robust playback backend on Video.js"
 
       - name: Validate LiveTV playback core
@@ -45,6 +45,6 @@ jobs:
           npm run check
           npm test
 
-      - name: Force-with-lease main to imported Video.js history
+      - name: Import Video.js history into main
         run: |
           git push origin main --force
