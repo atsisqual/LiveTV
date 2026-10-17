@@ -1,0 +1,9 @@
+{
+  "source": "https://raw.githubusercontent.com/LITUATUI/M3UPT/main/M3U/M3UPT.m3u",
+  "upstreamRepository": "https://github.com/LITUATUI/M3UPT",
+  "upstreamCommit": "8e3b586069a5b07bd3979b1af42a812fce254e26",
+  "sha256": "4a77012747dabe559e1c5cd79407575893576859dae68db2d00f8c9079af1b36",
+  "bytes": 260867,
+  "extinfEntries": 962,
+  "fetchedAt": "2026-10-17T18:22:51Z"
+}
