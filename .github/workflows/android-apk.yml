@@ -65,20 +65,20 @@ jobs:
           APK=android/app/build/outputs/apk/debug/app-debug.apk
           test -f "$APK"
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep "package: name='com.atsisqual.livetv.shaka'"
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep "versionName='0.3.0'"
-          cp "$APK" LiveTV-Android-Test-v0.3.0.apk
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep "versionName='0.4.0'"
+          cp "$APK" LiveTV-Android-Test-v0.4.0.apk
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
         with:
-          name: LiveTV-Android-Test-v0.3.0
-          path: LiveTV-Android-Test-v0.3.0.apk
+          name: LiveTV-Android-Test-v0.4.0
+          path: LiveTV-Android-Test-v0.4.0.apk
           if-no-files-found: error
 
       - name: Publish test APK release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          TAG=android-test-v0.3.0
-          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "LiveTV Android Test v0.3.0" --notes "Android test build using the official Video.js 10 live-video-player/live-video-skin UI, embedded M3UPT, HLS/Shaka fallback and native request headers." --prerelease
-          gh release upload "$TAG" LiveTV-Android-Test-v0.3.0.apk --clobber
+          TAG=android-test-v0.4.0
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "LiveTV Android Test v0.4.0" --notes "TV-first Android UI inspired by modern operator apps: hero live player, favorites rail, zapping, channel browser and bottom navigation. Backend remains Video.js 10 + HLS/Shaka fallback with embedded M3UPT and native request headers." --prerelease
+          gh release upload "$TAG" LiveTV-Android-Test-v0.4.0.apk --clobber
